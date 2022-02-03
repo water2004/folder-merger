@@ -9,6 +9,7 @@
 #include <QDateTime>
 #include <QVector>
 #include <myfile.h>
+#include <QSet>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -22,7 +23,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     QString source="",target="";
-    QString fileMd5(const QString &sourceFilePath);
+    QString fileMd5(QString sourceFilePath);
     bool copyFileToPath(QString sourceDir ,QString toDir);
     void scanS(QString dir);
     QVector<myFile> files;
@@ -31,6 +32,8 @@ public:
     void preScanS(QString dir);
     QVector<QString> copyfrom;
     QVector<QString> copyto;
+    bool useHash=false;
+    QSet<QString> hashs;
     int tot=0;
 
 private slots:
@@ -39,6 +42,8 @@ private slots:
     void on_target_clicked();
 
     void on_start_clicked();
+
+    void on_checkBox_stateChanged(int arg1);
 
 private:
     Ui::MainWindow *ui;

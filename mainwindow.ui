@@ -14,7 +14,7 @@
    <bool>false</bool>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Folder Merger - by GBwater</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="acceptDrops">
@@ -83,23 +83,6 @@
           </size>
          </property>
         </spacer>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="new_only">
-         <property name="text">
-          <string>只保留新文件</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="both">
-         <property name="text">
-          <string>同时保留新旧文件</string>
-         </property>
-        </widget>
        </item>
        <item>
         <spacer name="horizontalSpacer_2">

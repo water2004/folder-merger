@@ -4,7 +4,7 @@
 #include <QCryptographicHash>
 #include <QFileInfo>
 #include <QVector>
-
+#include <QMessageBox>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -12,6 +12,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     ui->source->setStr(&source);
     ui->target->setStr(&target);
+    ui->target->type=2;
+    ui->source->type=1;
     ui->source->setAcceptDrops(true);
     ui->target->setAcceptDrops(true);
 }
@@ -28,7 +30,11 @@ void MainWindow::on_source_clicked()
     if(s!="")
     {
         source=s;
-        ui->source->setText("已选择-"+s);
+        if(s.length()>20)
+        {
+            s="..."+s.mid(s.length()-20);
+        }
+        ui->source->setText("源\n"+s);
     }
 }
 
@@ -39,21 +45,42 @@ void MainWindow::on_target_clicked()
     if(s!="")
     {
         target=s;
-        ui->target->setText("已选择-"+s);
+        source=s;
+        if(s.length()>20)
+        {
+            s="..."+s.mid(s.length()-20);
+        }
+        ui->target->setText("目标\n"+s);
     }
 }
 
 
 void MainWindow::on_start_clicked()
 {
+    if(source==""||target=="")
+    {
+        QMessageBox::warning(this,"提示","请选择源和目标目录！");
+        return;
+    }
     scanT(target);
     qSort(files);
+    if(useHash)
+        for(int i=0;i<files.length();i++)
+        {
+            hashs<<files[i].hash;
+        }
     preScanS(source);
     scanS(source);
+    ui->statusBar->showMessage("完成");
+    tot=0;
+    copyfrom.clear();
+    copyto.clear();
+    hashs.clear();
+    files.clear();
 }
 
 //计算文件哈希
-QString fileMd5(const QString &sourceFilePath) {
+QString MainWindow::fileMd5(QString sourceFilePath) {
 
     QFile sourceFile(sourceFilePath);
     qint64 fileSize = sourceFile.size();
@@ -110,9 +137,18 @@ bool MainWindow::copyFileToPath(QString sourceDir ,QString toDir)
     }
     QString folder=toDir;
     folder.remove(pos,len);
+    folder=folder.mid(target.length());
     QDir to(folder);
     if(!to.exists())
-        to.mkdir(folder);
+    {
+        to=QDir(target);
+        QStringList list=folder.split("/");
+        for(int i=0;i<list.length();i++)
+        {
+            to.mkdir(list[i]);
+            to.cd(list[i]);
+        }
+    }
     QFile::copy(sourceDir, toDir);
     return true;
 }
@@ -133,7 +169,12 @@ void MainWindow::scanT(QString dir)
         }
         else
         {
-            files<<myFile(fileInfo.fileName(),fileInfo.filePath(),fileInfo.lastModified(),"");
+            if(!useHash)
+                files<<myFile(fileInfo.fileName(),fileInfo.filePath(),fileInfo.lastModified(),"");
+            else
+            {
+                files<<myFile(fileInfo.fileName(),fileInfo.filePath(),fileInfo.lastModified(),fileMd5(fileInfo.filePath()));
+            }
         }
     }
 }
@@ -156,12 +197,15 @@ int MainWindow::find(QString v)
         }
         else
         {
-            while(files[mid].name==v) mid--;
             break;
         }
     }
     if(l<=r&&files[mid].name==v)
+    {
+        while(mid>=0&&files[mid].name==v) mid--;
+        mid++;
         return mid;
+    }
     else return -1;
 }
 
@@ -191,9 +235,18 @@ void MainWindow::preScanS(QString dir)
         {
             preScanS(fileInfo.filePath());
         }
-        else
+        else if(!useHash)
         {
             int f=find(fileInfo.fileName());
+            if(f!=-1)
+            {
+                while(files[f].name==fileInfo.fileName())
+                {
+                    if(files[f].path.mid(target.length())==fileInfo.filePath().mid(source.length())) break;
+                    f++;
+                }
+                if(files[f].name!=fileInfo.fileName()) f=-1;
+            }
             QString toDir=target+fileInfo.filePath().mid(source.length());
             if(f==-1) //copyFileToPath(fileInfo.filePath(),toDir);
             {
@@ -203,31 +256,60 @@ void MainWindow::preScanS(QString dir)
             }
             else
             {
-                int i=f;
-                bool copy=true;
-                while(i<files.length()&&files[i].name==fileInfo.fileName())
+                if(fileInfo.lastModified()>files[f].time)
                 {
-                    if(fileInfo.lastModified()<=files[i].time)
-                    {
-                        copy=false;
-                        break;
-                    }
-                    i++;
+                    QFile::remove(files[f].path);
+                    files[f].time=fileInfo.lastModified();
+                    copyfrom<<fileInfo.filePath();
+                    copyto<<toDir;
+                    tot++;
                 }
-                if(copy)
+            }
+        }
+        else
+        {
+            QString hash=fileMd5(fileInfo.filePath());
+            if(hashs.contains(hash)) continue;
+            int f=find(fileInfo.fileName());
+            if(f!=-1)
+            {
+                while(files[f].name==fileInfo.fileName())
                 {
-                    while(f<files.length()&&files[f].name==fileInfo.fileName())
-                    {
-                        QFile::remove(files[f].path);
-                        files[f].time=fileInfo.lastModified();
-                        //copyFileToPath(fileInfo.filePath(),toDir);
-                        copyfrom<<fileInfo.filePath();
-                        copyto<<toDir;
-                        tot++;
-                        f++;
-                    }
+                    if(files[f].path.mid(target.length())==fileInfo.filePath().mid(source.length())) break;
+                    f++;
                 }
+                if(files[f].name!=fileInfo.fileName()) f=-1;
+            }
+            QString toDir=target+fileInfo.filePath().mid(source.length());
+            if(f==-1) //copyFileToPath(fileInfo.filePath(),toDir);
+            {
+                copyfrom<<fileInfo.filePath();
+                copyto<<toDir;
+                tot++;
+            }
+            else
+            {
+                int i=1;
+                QString in="-1";
+                QString newN=files[f].path;
+                int pos=0;
+                while(pos<newN.length()&&newN[pos]!='.') pos++;
+                newN.insert(pos,in);
+                while(!QFile::rename(files[f].path,newN))
+                {
+                      i++;
+                      newN[pos+1]='0'+i;
+                }
+                copyfrom<<fileInfo.filePath();
+                copyto<<toDir;
+                tot++;
             }
         }
     }
 }
+
+void MainWindow::on_checkBox_stateChanged(int arg1)
+{
+    useHash=ui->checkBox->isChecked();
+}
+

@@ -15,6 +15,7 @@ class myButtom : public QPushButton
 public:
     explicit myButtom(QWidget *parent = nullptr);
     QString *str;
+    int type;
     void setStr(QString *s);
 
 signals:
