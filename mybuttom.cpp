@@ -8,7 +8,9 @@ void myButtom::dropEvent(QDropEvent *event)
 {
     const QMimeData*qm=event->mimeData();//获取MIMEData
     QString url=qm->urls()[0].toLocalFile();
+    if(url=="") return;
     *str=url;
+    this->setText("已选择-"+url);
 }
 
 void myButtom::setStr(QString *s)

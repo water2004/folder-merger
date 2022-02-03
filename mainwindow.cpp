@@ -24,14 +24,23 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_source_clicked()
 {
-    source=QFileDialog::getExistingDirectory(this,"选择源");
-
+    QString s=QFileDialog::getExistingDirectory(this,"选择源");
+    if(s!="")
+    {
+        source=s;
+        ui->source->setText("已选择-"+s);
+    }
 }
 
 
 void MainWindow::on_target_clicked()
 {
-    target=QFileDialog::getExistingDirectory(this,"选择目标");
+    QString s=QFileDialog::getExistingDirectory(this,"选择目标");
+    if(s!="")
+    {
+        target=s;
+        ui->target->setText("已选择-"+s);
+    }
 }
 
 
