@@ -45,7 +45,6 @@ void MainWindow::on_target_clicked()
     if(s!="")
     {
         target=s;
-        source=s;
         if(s.length()>20)
         {
             s="..."+s.mid(s.length()-20);
@@ -163,6 +162,7 @@ void MainWindow::scanT(QString dir)
     {
         if(fileInfo.fileName() == "." || fileInfo.fileName() == "..")
             continue;
+        ui->statusBar->showMessage("扫描中"+fileInfo.filePath());
         if(fileInfo.isDir())
         {
             scanT(fileInfo.filePath());
